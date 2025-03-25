@@ -56,5 +56,5 @@ dependencyResolutionManagement {
         }
     }
 }
-rootProject.name = 'klum-ast-scheduler'
+rootProject.name = 'klum-ast-support'
 

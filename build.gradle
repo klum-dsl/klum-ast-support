@@ -20,7 +20,8 @@ plugins {
     id "org.sonarqube"
 }
 
-group 'com.blackbuild.klum.scheduler'
+group 'com.blackbuild.klum.astsupport' +
+        ''
 description 'All transformations in a row'
 
 java {
@@ -120,12 +121,12 @@ publishing {
                 pom.name = project.name
                 pom.description = project.description
 
-                pom.url = 'https://github.com/klum-dsl/klum-ast-scheduler.git'
+                pom.url = 'https://github.com/klum-dsl/klum-ast-support.git'
 
                 pom.scm {
-                    url = 'https://github.com/klum-dsl/klum-ast-scheduler.git'
-                    connection = 'scm:git:https://github.com/klum-dsl/klum-ast-scheduler.git'
-                    developerConnection = 'scm:git:https://github.com/klum-dsl/klum-ast-scheduler.git'
+                    url = 'https://github.com/klum-dsl/klum-ast-support.git'
+                    connection = 'scm:git:https://github.com/klum-dsl/klum-ast-support.git'
+                    developerConnection = 'scm:git:https://github.com/klum-dsl/klum-ast-support.git'
                 }
 
                 pom.licenses {
@@ -162,7 +163,7 @@ nexusPublishing {
 
 sonar {
     properties {
-        property "sonar.projectKey", "blackbuild_klum-ast-scheduler"
+        property "sonar.projectKey", "blackbuild_klum-ast-support"
         property "sonar.organization", "blackbuild"
         property "sonar.host.url", "https://sonarcloud.io"
         property "sonar.gradle.skipCompile", "true"
