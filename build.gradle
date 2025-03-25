@@ -1,0 +1,192 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+plugins {
+    id 'nebula.release'
+    id "java-library"
+    id 'groovy'
+    id 'signing'
+    id 'maven-publish'
+    id 'jacoco'
+    id 'jvm-test-suite'
+
+    id "com.github.hierynomus.license"
+    id "com.github.ben-manes.versions"
+    id "io.github.gradle-nexus.publish-plugin"
+    id "org.sonarqube"
+}
+
+group 'com.blackbuild.klum.scheduler'
+description 'All transformations in a row'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(11)
+    }
+    withJavadocJar()
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs << '-parameters'
+}
+
+configurations {
+    sharedTests
+}
+
+configurations.matching { it.name in ["testImplementation", "groovy3TestsImplementation", "groovy4TestsImplementation"]}.configureEach {
+    extendsFrom(configurations.sharedTests)
+}
+
+test {
+    // inputs.dir file("src/test/scenarios")
+    outputs.dir layout.buildDirectory.dir("test-classes")
+}
+
+
+jacoco {
+    toolVersion = "0.8.11"
+}
+jacocoTestReport {
+    executionData(tasks.withType(Test))
+    reports {
+        xml.required = true
+    }
+}
+
+testing {
+    suites {
+        test {
+            useJUnit()
+        }
+
+        withType(JvmTestSuite).matching { it.name.startsWith("groovy") }.configureEach {
+            def groovyVersion = it.name.charAt(6)
+            useSpock(libs.versions.spock."g$groovyVersion")
+
+            sources {
+                groovy {
+                    srcDirs = ['src/test/groovy']
+                    destinationDirectory = file("build/classes/groovy/test-g$groovyVersion")
+                }
+            }
+
+            dependencies {
+                implementation project()
+                implementation libs.jb.anno
+                implementation libs.spock.junit4."g$groovyVersion"
+                implementation libs.groovy."v$groovyVersion"
+                implementation sourceSets.test.output
+                runtimeOnly libs.bytebuddy
+                runtimeOnly libs.objenesis
+                runtimeOnly libs.jpl
+
+            }
+        }
+        groovy3Tests(JvmTestSuite)
+        groovy4Tests(JvmTestSuite)
+    }
+}
+
+tasks.named('check') {
+    dependsOn(testing.suites.groovy3Tests)
+    dependsOn(testing.suites.groovy4Tests)
+}
+
+dependencies {
+    compileOnly libs.jb.anno
+    compileOnly libs.groovy.v2
+
+    testImplementation libs.bundles.spock.groovy.v2
+    testImplementation libs.jb.anno
+
+    testRuntimeOnly libs.bundles.spockRuntime
+    testRuntimeOnly libs.jpl
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from(components.java)
+            suppressPomMetadataWarningsFor('testFixturesApiElements')
+            suppressPomMetadataWarningsFor('testFixturesRuntimeElements')
+            pom { pom ->
+                project.getName()
+                pom.name = project.name
+                pom.description = project.description
+
+                pom.url = 'https://github.com/klum-dsl/klum-ast-scheduler.git'
+
+                pom.scm {
+                    url = 'https://github.com/klum-dsl/klum-ast-scheduler.git'
+                    connection = 'scm:git:https://github.com/klum-dsl/klum-ast-scheduler.git'
+                    developerConnection = 'scm:git:https://github.com/klum-dsl/klum-ast-scheduler.git'
+                }
+
+                pom.licenses {
+                    license {
+                        name = 'MIT License (MIT)'
+                        url = 'https://opensource.org/licenses/MIT'
+                        distribution = 'repo'
+                    }
+                }
+
+                pom.developers {
+                    developer {
+                        id = 'pauxus'
+                        name = 'Stephan Pauxberger'
+                        email = 'stephan@blackbuild.com'
+                        url = 'https://github.com/pauxus'
+                    }
+                }
+            }
+        }
+    }
+}
+
+signing {
+    required { gradle.taskGraph.hasTask("publish") || gradle.taskGraph.hasTask("publishToMavenLocal") }
+    sign publishing.publications.mavenJava
+}
+
+nexusPublishing {
+    repositories {
+        sonatype()
+    }
+}
+
+sonar {
+    properties {
+        property "sonar.projectKey", "blackbuild_klum-ast-scheduler"
+        property "sonar.organization", "blackbuild"
+        property "sonar.host.url", "https://sonarcloud.io"
+        property "sonar.gradle.skipCompile", "true"
+    }
+}
+
+releaseCheck.doLast {
+    if (!gradle.includedBuilds.isEmpty())
+        throw new GradleException("Releasing is not allowed with composite builds. Please release $gradle.includedBuilds separately")
+}
+
+if (hasProperty('buildScan')) {
+    buildScan {
+        termsOfServiceUrl = 'https://gradle.com/terms-of-service'
+        termsOfServiceAgree = 'yes'
+    }
+}
+
+license {
+    header = rootProject.file("LICENSE")
+    mapping("java", "SLASHSTAR_STYLE")
+    mapping("groovy", "SLASHSTAR_STYLE")
+    mapping("gdsl", "SLASHSTAR_STYLE")
+    exclude("mockup/**")
+    strictCheck(true)
+}
+
