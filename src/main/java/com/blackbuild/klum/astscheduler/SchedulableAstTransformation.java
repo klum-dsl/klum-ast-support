@@ -29,11 +29,15 @@ import org.codehaus.groovy.control.CompilationUnit;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.transform.ASTTransformation;
 
+import java.util.Objects;
+
 public interface SchedulableAstTransformation extends ASTTransformation, CompilationUnitAware, Comparable<SchedulableAstTransformation> {
 
     CompilationUnit getCompilationUnit();
 
-    int getOrder();
+    default int getOrder() {
+        return Objects.requireNonNull(this.getClass().getAnnotation(AstOrder.class)).value();
+    }
 
     @Override
     default void visit(ASTNode[] nodes, SourceUnit source) {
